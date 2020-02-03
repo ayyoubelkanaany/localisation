@@ -8,6 +8,7 @@ import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
@@ -78,7 +79,9 @@ public class speaker extends AppCompatActivity {
                 public void onResults(Bundle results) {
                     List<String> result=results.getStringArrayList(speechRecognizer.RESULTS_RECOGNITION);
                     nom_zone=result.get(0);
-                    create_zone();
+                    Toast.makeText(getApplicationContext(), "no tts"+nom_zone, Toast.LENGTH_SHORT).show();
+                    ///Log.i("res",nom_zone);
+                   // create_zone();
                 }
                 @Override
                 public void onPartialResults(Bundle partialResults) {
@@ -120,7 +123,10 @@ public class speaker extends AppCompatActivity {
 public void create_zone(){
     maps=new MapsActivity();
     if(latitude!=0.0 && longitude!=0.0) {
-        maps.drawingCercle(latitude, longitude,nom_zone);
+       /// maps.drawingCercle(latitude, longitude,nom_zone);
+         ///maps.insertion(nom_zone,""+latitude,""+longitude);
+        //zoomed map
+        speake("la zone est bien ajouter");
     }
 }
 }

@@ -53,12 +53,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker marker;
     private Marker marker1;
     private Circle circle;
+    public static listener lis;
+
     public static double latitude, longitude;
     private LatLng latLng;
     private LocationManager locationManager;
     public Location location;
     boolean isenable = false;
-    speaker parleur;
+    public static speaker parleur;
     private Context context;
     sqliteDbHelper dbhelper;
     Timer timer;
@@ -99,21 +101,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.setTrafficEnabled(true);
         mMap.setBuildingsEnabled(true);
+
+        ///long insert=insertion("ici",""+31.635248,""+-8.000068);//zoomed map
+        ///insertion("ici",""+31.22266,""+-8.022245603);//zoomed map
+       // Toast.makeText(getApplicationContext(), ""+insert, Toast.LENGTH_SHORT).show();
         my_place(latitude,longitude);/////////////////
         get_all_circles();
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-                parleur.speake("qu'il est le nome de la zone");
+                drawingCercle(latLng.latitude, latLng.longitude,"ici");
+                insertion("là",""+latLng.latitude,""+latLng.longitude);
+              /*  parleur.speake("qu'il est le nome de la zone");
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    e.printStackTrace();///
                 }
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-                parleur.speechRecognizer.startListening(intent);
+                parleur.speechRecognizer.startListening(intent);*/
+
             }
         });
     }
@@ -126,7 +135,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
        latitude=lat;longitude=lon;
        if(latitude!=0.0 && longitude!=0.0){
            latLng = new LatLng(latitude, longitude);
-           marker=mMap.addMarker(new MarkerOptions().position(latLng).title("you are here"));
+           marker = mMap.addMarker(new MarkerOptions().position(latLng).title("you are here"));
            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));     //zoomed map
        }
     }
@@ -147,7 +156,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, this);
             location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             if (location != null) {
                 ///si la localisation n'est pas null en change les coordonnées qui sont static
@@ -227,26 +236,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
        cursor.close();
        for(int i=0;i<itemIds.size();i++){
            double c_lat=0,c_log=0;
-           String c_nom="";
+           String c_nom="vide";
            c_nom=zones.get(i);
            c_lat=Double.parseDouble(altitudes.get(i));
            c_log=Double.parseDouble(longitudes.get(i));
-          drawingCercle(c_lat,c_log,c_nom);
+           drawingCercle(c_lat,c_log,c_nom);
        }
    }
     public void drawingCercle(double lat, double lon,String nom){
         // Add a marker in latLng precised and move the camera
         LatLng place = new LatLng(lat,lon);   /////lag and lat
-        marker1=mMap.addMarker(new MarkerOptions().position(place).title(nom));
+        marker1=mMap.addMarker(new MarkerOptions().position(place).title("ici"));
         circle = mMap.addCircle(new CircleOptions()              //circle created arround home variable
                 .center(place)
-                .radius(15)
+                .radius(20)
                 .fillColor(Color.TRANSPARENT)
                 .strokeColor(Color.rgb(34,10,44)));
          mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(place, 14));
-        long insert=insertion(nom_zone,""+latitude,""+longitude);//zoomed map
-        parleur.speake("la zone est bien ajouter");
-
 
     }
     @RequiresApi(api = Build.VERSION_CODES.M)

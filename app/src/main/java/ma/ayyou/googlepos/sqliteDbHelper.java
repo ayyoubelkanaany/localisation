@@ -17,20 +17,20 @@ public class sqliteDbHelper extends SQLiteOpenHelper {
 
     public sqliteDbHelper(Context context) {
         super(context,DATABASE_NAME, null, DATABASE_VERSION);
-       // Toast.makeText(context, "hello1", Toast.LENGTH_SHORT).show();
+       //Toast.makeText(context, "hello1", Toast.LENGTH_SHORT).show();
         this.context=context;
     }
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(SQL_CREATE_TABLE);
-      ///  Toast.makeText(context, "hello2", Toast.LENGTH_SHORT).show();
+      // Toast.makeText(context, "hello2", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL(SQL_DELETE_TABLE);
         onCreate(db);
-      //  Toast.makeText(context, "hello3", Toast.LENGTH_SHORT).show();
+      // Toast.makeText(context, "hello3", Toast.LENGTH_SHORT).show();
 
     }
     @Override
