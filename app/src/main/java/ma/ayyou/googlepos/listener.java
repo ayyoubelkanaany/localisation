@@ -16,11 +16,6 @@ import static android.content.ContentValues.TAG;
 
 public class listener implements RecognitionListener
 {
-    public listener(Context context){
-        this.context=context;
-    }
-    public speaker parleur;
-   public Context context;
     private static final String TAG = "MyStt3Activity";
     MapsActivity mapsActivity;
     public void onReadyForSpeech(Bundle params){ }
@@ -50,8 +45,12 @@ public class listener implements RecognitionListener
         //  mText.setText("results: "+str+" "+String.valueOf(data.size()));
         Log.i("results: ", (String) data.get(0));
         mapsActivity=new MapsActivity();
-        parleur=new speaker(MapsActivity.parleur);
-        parleur.speake((String) data.get(0));
+        Log.i("maps: ", String.valueOf(mapsActivity));
+        Log.i("maps speak: ", String.valueOf(data.get(0)));
+        Log.i("maps speak 1: ", data.get(0).toString());
+        //mapsActivity.speake(data.get(0).toString());
+        Log.i("mapsActivity",mapsActivity.toString());
+        mapsActivity.insertion(data.get(0).toString(),String.valueOf(31.630761),String.valueOf(-8.016677));
 
     }
     public void onPartialResults(Bundle partialResults)

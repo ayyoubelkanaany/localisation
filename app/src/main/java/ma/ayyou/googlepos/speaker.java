@@ -102,7 +102,7 @@ public class speaker extends AppCompatActivity {
                     Toast.makeText(context, "no tts", Toast.LENGTH_SHORT).show();
                 }
                 else{
-                    myTTs.setLanguage(Locale.FRENCH);
+                    myTTs.setLanguage(Locale.US);
                     speake(menu);
                 }
 

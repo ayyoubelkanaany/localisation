@@ -20,10 +20,15 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.BaseColumns;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -47,14 +52,15 @@ import java.util.TimerTask;
 
 import static ma.ayyou.googlepos.speaker.nom_zone;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener, View.OnClickListener {
 
     private GoogleMap mMap;
     private Marker marker;
     private Marker marker1;
     private Circle circle;
     public static listener lis;
-
+    static LatLng blindCoor;
+    TextToSpeech txtSpeech;
     public static double latitude, longitude;
     private LatLng latLng;
     private LocationManager locationManager;
@@ -64,6 +70,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Context context;
     sqliteDbHelper dbhelper;
     Timer timer;
+    SpeechRecognizer sr;
+    Button record;
+
+    Circle [] allCircles;
+
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,28 +83,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { String[] permission = {Manifest.permission.RECORD_AUDIO};requestPermissions(permission, 3);
+      /*  if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { String[] permission = {Manifest.permission.RECORD_AUDIO};requestPermissions(permission, 3);
         }
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+*/
+
+      locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         isenable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         parleur = new speaker(this);
         parleur.initializespeechRecognizer();
-        parleur.initializeTextToSpeech("Bienvenu");
+        parleur.initializeTextToSpeech("welcome I am ready");
         marker=null;
         circle=null;
         etat_gps();
         context=this;
         dbhelper= new sqliteDbHelper(context);
-       /*timer.schedule(new TimerTask() {
-           @Override
-           public void run() {
-               isCircleContains(circle,latLng);
-           }
-       },0,10000);*/
+
+
+        //record = (Button) findViewById(R.id.record);
+
+        //record.setOnClickListener(this);
+        sr = SpeechRecognizer.createSpeechRecognizer(this);
+        sr.setRecognitionListener(new listener());
     }
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onMapReady(GoogleMap googleMap) {
+
+        parleur.initializeTextToSpeech("welcome I am ready");
         mMap = googleMap;
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.getUiSettings().setZoomControlsEnabled(true);
@@ -101,43 +117,93 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.setTrafficEnabled(true);
         mMap.setBuildingsEnabled(true);
-
         ///long insert=insertion("ici",""+31.635248,""+-8.000068);//zoomed map
-        ///insertion("ici",""+31.22266,""+-8.022245603);//zoomed map
-       // Toast.makeText(getApplicationContext(), ""+insert, Toast.LENGTH_SHORT).show();
-        my_place(latitude,longitude);/////////////////
-        get_all_circles();
+        //long insert=insertion("FST",""+31.6439666,""+-8.0203603);//zoomed map  31°38'40.6"N 8°01'11.4"
+       //Toast.makeText(getApplicationContext(), ""+insert, Toast.LENGTH_SHORT).show();
+        blindCoor=my_place(latitude,longitude);             //blindCoordinates while is walking
+        get_all_circles();           //get all zones on the map
+      /*for (Circle oneCircle : get_all_circles()) {                      //foreach circle I test if the user is inside or not
+          Log.i("circles", String.valueOf(oneCircle));
+         if (oneCircle != null) {
+               Boolean msg =isCircleContains(oneCircle,blindCoor);
+                if (msg) {
+
+                    Toast.makeText(getBaseContext(), "Blind person is Inside"+blindCoor.latitude+" and long "+blindCoor.longitude, Toast.LENGTH_LONG).show();
+                    parleur.speake("you are inside the zone ");
+                    //speake("you are inside the zone ");
+
+                } else {
+                    Toast.makeText(getBaseContext(), "Blind person is Outside"+blindCoor.latitude+" and long "+blindCoor.longitude, Toast.LENGTH_LONG).show();
+                    parleur.speake("you are not close to our zone");
+                   // speake("you are not close to our zone");
+                    Toast.makeText(getBaseContext(), "you are not close to our zone", Toast.LENGTH_LONG).show();
+
+                }
+               Log.i("onecircle", String.valueOf(oneCircle));
+            }
+        }*/
+
+
+        /////to get coordinates every 10secs
+        final Handler handler = new Handler();
+        timer = new Timer();
+        TimerTask doTask = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        try {
+                            testZone(get_all_circles(),blindCoor);      //this fct check if the person is inside the zone  or not;
+                        } catch (Exception e) {
+                            Toast.makeText(MapsActivity.this, "erreur", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        };
+        timer.schedule(doTask, 0, 10000);
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-                drawingCercle(latLng.latitude, latLng.longitude,"ici");
-                insertion("là",""+latLng.latitude,""+latLng.longitude);
-              /*  parleur.speake("qu'il est le nome de la zone");
-                try {
+               /**** drawingCercle(blindCoor.latitude, blindCoor.longitude,"newZone");
+                long a=insertion("newZone",""+blindCoor.latitude,""+blindCoor.longitude);
+                Log.i("nbr of isertion", String.valueOf(a));****/
+                parleur.speake("what is the name of your new zone");
+              try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();///
                 }
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+               /* Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
                 parleur.speechRecognizer.startListening(intent);*/
+             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+              intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+              intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,Locale.getDefault());  //or ar-JO   en-US   ar-MA
+              intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "com.example.keyboard");
 
-            }
+              intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);  // 1 is the maximum number of results to be returned.
+              sr.startListening(intent);
+
+          }
         });
     }
     /////LES M'ETHODE UTILISER
-   public void  my_place(double lat,double lon){
-        // Add a marker in Sydney and move the camera
-       if(marker!=null){
+   public LatLng  my_place(double lat,double lon){
+        // Add a marker and move the camera
+       if(marker!=null){     //when
            marker.remove();
        }
        latitude=lat;longitude=lon;
        if(latitude!=0.0 && longitude!=0.0){
            latLng = new LatLng(latitude, longitude);
-           marker = mMap.addMarker(new MarkerOptions().position(latLng).title("you are here"));
+           marker = mMap.addMarker(new MarkerOptions().position(latLng).icon(BitmapDescriptorFactory
+                   .defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+                   .title("you are here"));       ////for blind marker with blue color
            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));     //zoomed map
        }
+       return latLng;
     }
     ////////:
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -153,9 +219,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         if (isenable) {
             ////exécuter si le gps est activer
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                return;
-            }
+           /* if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return;    /////c'est moi
+            }*/
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, this);
             location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             if (location != null) {
@@ -189,12 +255,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (knownName.equals("Unnamed Road")) {
 
                 } else {
-                    parleur.speake("vous etes sur " + knownName);
+                    parleur.speake("you are in " + knownName);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+
+
+    ///////////fct to test if the user is inside or not
+    private boolean  testZone(Circle [] cercles,LatLng Coord)
+    {
+        for (int i=0;i<cercles.length;i++) {                      //foreach circle I test if the user is inside or not       //Circle oneCircle : cercles
+            Log.i("circles", String.valueOf(cercles[i]));
+            if (cercles[i] != null) {
+                Boolean msg =isCircleContains(cercles[i],Coord);
+                if (msg) {
+                    //Toast.makeText(getBaseContext(), "Blind person is Inside"+Coord.latitude+" and long "+Coord.longitude, Toast.LENGTH_LONG).show();
+                    parleur.speake("you are inside the zone ");
+                    break;
+
+                } else {
+                    //Toast.makeText(getBaseContext(), "Blind person is Outside"+Coord.latitude+" and long "+Coord.longitude, Toast.LENGTH_LONG).show();
+                    parleur.speake("you are not close to our zone");
+
+                    continue;
+                    // speake("you are not close to our zone");
+                  //  Toast.makeText(getBaseContext(), "you are not close to our zone", Toast.LENGTH_LONG).show();
+
+                }
+            }
+        }
+        return false;
     }
     ////////////////////////////////////////////////////////////::::
     private boolean isCircleContains(Circle circle, LatLng point) {
@@ -213,7 +307,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 ////////////////////////////////////////////////////////////////////////
-   public void get_all_circles(){
+   public Circle [] get_all_circles(){
        Cursor cursor= selection();
        List itemIds = new ArrayList<>();
        List<String> zones=new ArrayList<>();
@@ -234,25 +328,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
            longitudes.add(logitude);
        }
        cursor.close();
+
+       allCircles=new Circle[itemIds.size()];
        for(int i=0;i<itemIds.size();i++){
            double c_lat=0,c_log=0;
            String c_nom="vide";
            c_nom=zones.get(i);
            c_lat=Double.parseDouble(altitudes.get(i));
            c_log=Double.parseDouble(longitudes.get(i));
-           drawingCercle(c_lat,c_log,c_nom);
+           Log.i("cr1", String.valueOf(drawingCercle(c_lat,c_log,c_nom)));
+           Circle drawedCircle=drawingCercle(c_lat,c_log,c_nom);
+           allCircles[i]=drawedCircle;                 //filling the circle array by circles' database
+           Log.i("circle "+i, allCircles[i].toString());
        }
+       return allCircles;
    }
-    public void drawingCercle(double lat, double lon,String nom){
+    public Circle drawingCercle(double lat, double lon,String nom){
         // Add a marker in latLng precised and move the camera
         LatLng place = new LatLng(lat,lon);   /////lag and lat
-        marker1=mMap.addMarker(new MarkerOptions().position(place).title("ici"));
+        marker1=mMap.addMarker(new MarkerOptions().position(place).title(nom));
         circle = mMap.addCircle(new CircleOptions()              //circle created arround home variable
                 .center(place)
                 .radius(20)
                 .fillColor(Color.TRANSPARENT)
                 .strokeColor(Color.rgb(34,10,44)));
-         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(place, 14));
+        // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(place, 14));
+         return circle;
 
     }
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -269,7 +370,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
                 location= locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (location != null) {
-                    ///si la localisation n'est pas null en change les coordonnées qui sont static
+                    ///si la localisation n'est pas null on change les coordonnées qui sont static
                     longitude=location.getLongitude();
                     latitude=location.getLatitude();
                 }
@@ -333,5 +434,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         parleur.speake("ouvrez le gps");
         Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
         startActivityForResult(intent,2);
+    }
+
+
+
+    /////speake fct to speake a msg
+    public void speake(String message) {
+        if (Build.VERSION.SDK_INT > 21) {
+            txtSpeech.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
+        } else {
+            txtSpeech.speak(message, TextToSpeech.QUEUE_FLUSH, null);
+
+        }
+    }
+    //initialise txtToSpeech to a language
+    private void initializeTextToSpeech() {
+        txtSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (txtSpeech.getEngines().size() == 0) {
+                    Toast.makeText(MapsActivity.this, "no tts", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    txtSpeech.setLanguage(Locale.US);      //you can choose any language
+                    speake("Welcome I am ready");
+                }
+
+            }
+        });
+    }
+
+    @Override
+    public void onClick(View v) {
+//for voice recorder
+        /* if (v.getId() == R.id.record)
+        {
+           Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+           // intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"ar-MA");  //or ar-JO   en-US
+            intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"com.example.keyboard");
+            //   intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 20000); // value to wait
+
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);  // 1 is the maximum number of results to be returned.
+            sr.startListening(intent);
+        }*/
+    }
+
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
     }
 }
