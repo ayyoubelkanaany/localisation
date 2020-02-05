@@ -4,7 +4,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
-
+///////////enable speaker while I'm recording
+/////////////////////and speak=true
 import android.Manifest;
 import android.content.ContentValues;
 import android.content.Context;
@@ -21,6 +22,8 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.BaseColumns;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
@@ -68,12 +71,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     boolean isenable = false;
     public static speaker parleur;
     private Context context;
-    sqliteDbHelper dbhelper;
+    static sqliteDbHelper dbhelper;
     Timer timer;
     SpeechRecognizer sr;
     Button record;
 
+    ///arrays to fill from database see get_all_cercles
     Circle [] allCircles;
+    String [] allnames;
+
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
@@ -122,30 +128,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
        //Toast.makeText(getApplicationContext(), ""+insert, Toast.LENGTH_SHORT).show();
         blindCoor=my_place(latitude,longitude);             //blindCoordinates while is walking
         get_all_circles();           //get all zones on the map
-      /*for (Circle oneCircle : get_all_circles()) {                      //foreach circle I test if the user is inside or not
-          Log.i("circles", String.valueOf(oneCircle));
-         if (oneCircle != null) {
-               Boolean msg =isCircleContains(oneCircle,blindCoor);
-                if (msg) {
-
-                    Toast.makeText(getBaseContext(), "Blind person is Inside"+blindCoor.latitude+" and long "+blindCoor.longitude, Toast.LENGTH_LONG).show();
-                    parleur.speake("you are inside the zone ");
-                    //speake("you are inside the zone ");
-
-                } else {
-                    Toast.makeText(getBaseContext(), "Blind person is Outside"+blindCoor.latitude+" and long "+blindCoor.longitude, Toast.LENGTH_LONG).show();
-                    parleur.speake("you are not close to our zone");
-                   // speake("you are not close to our zone");
-                    Toast.makeText(getBaseContext(), "you are not close to our zone", Toast.LENGTH_LONG).show();
-
-                }
-               Log.i("onecircle", String.valueOf(oneCircle));
-            }
-        }*/
 
 
         /////to get coordinates every 10secs
-        final Handler handler = new Handler();
+        Log.i("blind coord", String.valueOf(blindCoor));
+       final Handler handler = new Handler();
         timer = new Timer();
         TimerTask doTask = new TimerTask() {
             @Override
@@ -165,27 +152,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-               /**** drawingCercle(blindCoor.latitude, blindCoor.longitude,"newZone");
-                long a=insertion("newZone",""+blindCoor.latitude,""+blindCoor.longitude);
-                Log.i("nbr of isertion", String.valueOf(a));****/
+               /****
+                drawingCercle(blindCoor.latitude, blindCoor.longitude,"newZone");         ////attention
+                long a=insertion("salle3",""+blindCoor.latitude,""+blindCoor.longitude);
+                Log.i("nbr of isertion", String.valueOf(a));
+               ****/
+
+
+
+                ////vibrating while long click on the map
+                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                // Vibrate for 500 milliseconds
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    //deprecated in API 26
+                    vibrator.vibrate(300);
+                }
+
+                 //////speaking to the user////////////////
                 parleur.speake("what is the name of your new zone");
+                speaker.speak=false;     //this for enabling the speaker to speak until the user say what he want
               try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();///
                 }
-               /* Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-                parleur.speechRecognizer.startListening(intent);*/
-             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+
+              //intent to get voice's user///////
+              Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
               intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
               intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,Locale.getDefault());  //or ar-JO   en-US   ar-MA
               intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "com.example.keyboard");
 
               intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);  // 1 is the maximum number of results to be returned.
               sr.startListening(intent);
-
+                speaker.speak=true;    //permission granted commander hh
           }
         });
     }
@@ -234,6 +236,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         else {
             int REQUEST_ENABLE_LOCATION = 6;
+
             requestPermissions(
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.RECORD_AUDIO},REQUEST_ENABLE_LOCATION);
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
@@ -269,21 +272,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean  testZone(Circle [] cercles,LatLng Coord)
     {
         for (int i=0;i<cercles.length;i++) {                      //foreach circle I test if the user is inside or not       //Circle oneCircle : cercles
-            Log.i("circles", String.valueOf(cercles[i]));
+            Log.i("circles", String.valueOf(cercles[i])+" and noun is "+String.valueOf(allnames[i]));
             if (cercles[i] != null) {
                 Boolean msg =isCircleContains(cercles[i],Coord);
                 if (msg) {
                     //Toast.makeText(getBaseContext(), "Blind person is Inside"+Coord.latitude+" and long "+Coord.longitude, Toast.LENGTH_LONG).show();
-                    parleur.speake("you are inside the zone ");
-                    break;
+                    parleur.speake("you are inside "+allnames[i]);
+                    break;    //if we found the right zone we break
 
                 } else {
                     //Toast.makeText(getBaseContext(), "Blind person is Outside"+Coord.latitude+" and long "+Coord.longitude, Toast.LENGTH_LONG).show();
-                    parleur.speake("you are not close to our zone");
-
+                    parleur.speake("you are not closer to our zone");  //if not we continue
                     continue;
-                    // speake("you are not close to our zone");
-                  //  Toast.makeText(getBaseContext(), "you are not close to our zone", Toast.LENGTH_LONG).show();
 
                 }
             }
@@ -330,6 +330,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
        cursor.close();
 
        allCircles=new Circle[itemIds.size()];
+       allnames=new String[itemIds.size()];
        for(int i=0;i<itemIds.size();i++){
            double c_lat=0,c_log=0;
            String c_nom="vide";
@@ -339,7 +340,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
            Log.i("cr1", String.valueOf(drawingCercle(c_lat,c_log,c_nom)));
            Circle drawedCircle=drawingCercle(c_lat,c_log,c_nom);
            allCircles[i]=drawedCircle;                 //filling the circle array by circles' database
+           allnames[i]=c_nom;                          //filling the name circles array to get noun of places from database
            Log.i("circle "+i, allCircles[i].toString());
+           Log.i("circle name "+i, allnames[i]);
        }
        return allCircles;
    }
@@ -349,7 +352,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         marker1=mMap.addMarker(new MarkerOptions().position(place).title(nom));
         circle = mMap.addCircle(new CircleOptions()              //circle created arround home variable
                 .center(place)
-                .radius(20)
+                .radius(20)      // 20 meters for the zone perimeter
                 .fillColor(Color.TRANSPARENT)
                 .strokeColor(Color.rgb(34,10,44)));
         // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(place, 14));
@@ -381,12 +384,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         if (requestCode == 2) {
             if(resultCode==RESULT_CANCELED){
-                parleur.speake("le gps est ouvert");
+                parleur.speake("gps is on ");
             }
         }
     }
     public long insertion(String nom,String altitude,String longitude){
+      //  Log.i("insert1","hello"+dbhelper);
         SQLiteDatabase db = dbhelper.getWritableDatabase();
+        //Log.i("insert2","hello"+dbhelper);
         ContentValues values = new ContentValues();
         values.put(Contrat.testcontrat.COLUMN_NAME_ZONE, nom);
         values.put(Contrat.testcontrat.COLUMN_NAME_ALTTUDE, altitude);
@@ -404,8 +409,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Contrat.testcontrat.COLUMN_NAME_LONGITUDE,
 
         };
-        ///String selection = Contrat.testcontrat.COLUMN_NAME_PRENOM + " LIKE?";
-        ///String[] selectionArgs = { "user" };
+
         Cursor cursor = db.query(
                 Contrat.testcontrat.TABLE_NAME,
                 projection,
@@ -417,9 +421,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         );
         return cursor;
     }
+
+
     @Override
     public void onLocationChanged(Location location) {
-      my_place(location.getLatitude(),location.getLongitude());
+      blindCoor=my_place(location.getLatitude(),location.getLongitude());
       getAddress(location.getLatitude(),location.getLongitude());
     }
     @Override
@@ -427,11 +433,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
     @Override
     public void onProviderEnabled(String provider) {
-        parleur.speake("ouvrez le gps");
+        parleur.speake("turn on your gps");
     }
     @Override
     public void onProviderDisabled(String provider) {
-        parleur.speake("ouvrez le gps");
+        parleur.speake("turn on your gps");
         Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
         startActivityForResult(intent,2);
     }
@@ -466,18 +472,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onClick(View v) {
-//for voice recorder
-        /* if (v.getId() == R.id.record)
-        {
-           Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-           // intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"ar-MA");  //or ar-JO   en-US
-            intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"com.example.keyboard");
-            //   intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 20000); // value to wait
-
-            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);  // 1 is the maximum number of results to be returned.
-            sr.startListening(intent);
-        }*/
     }
 
 

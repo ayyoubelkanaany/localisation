@@ -17,6 +17,9 @@ import static android.content.ContentValues.TAG;
 public class listener implements RecognitionListener
 {
     private static final String TAG = "MyStt3Activity";
+
+    public static speaker parleur;
+
     MapsActivity mapsActivity;
     public void onReadyForSpeech(Bundle params){ }
     public void onBeginningOfSpeech(){ }
@@ -45,13 +48,15 @@ public class listener implements RecognitionListener
         //  mText.setText("results: "+str+" "+String.valueOf(data.size()));
         Log.i("results: ", (String) data.get(0));
         mapsActivity=new MapsActivity();
-        Log.i("maps: ", String.valueOf(mapsActivity));
-        Log.i("maps speak: ", String.valueOf(data.get(0)));
-        Log.i("maps speak 1: ", data.get(0).toString());
+        //Log.i("maps: ", String.valueOf(mapsActivity));
+        Log.i("you said : ", String.valueOf(data.get(0)));
+        Log.i("blind Coordinates: ", String.valueOf(mapsActivity.blindCoor));
         //mapsActivity.speake(data.get(0).toString());
-        Log.i("mapsActivity",mapsActivity.toString());
-        mapsActivity.insertion(data.get(0).toString(),String.valueOf(31.630761),String.valueOf(-8.016677));
-
+        //Log.i("mapsActivity",mapsActivity.toString());
+        //Log.i("mapsActivity dbhelper",mapsActivity.dbhelper.toString());
+      mapsActivity.insertion(data.get(0).toString(), String.valueOf(mapsActivity.blindCoor.latitude), String.valueOf(mapsActivity.blindCoor.longitude));   ///new zone added with blind
+                                                                                                                                                                 // coordinates and what he said
+        parleur.speake("new zone created");
     }
     public void onPartialResults(Bundle partialResults)
     {

@@ -25,20 +25,26 @@ public class speaker extends AppCompatActivity {
     public static String nom_zone;
     public static boolean get_zone=false;
     public SpeechRecognizer speechRecognizer;
+    static Boolean speak;
     @RequiresApi(api = Build.VERSION_CODES.M)
     public speaker(Context context) {
         this.context=context;
     }
     ///méthode speak
     public void speake(String message) {
-        if(Build.VERSION.SDK_INT>21){
-            myTTs.speak(message, TextToSpeech.QUEUE_FLUSH,null,null);
-        }
-        else{
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.DONUT) {
-                myTTs.speak(message,TextToSpeech.QUEUE_FLUSH,null);
+        //speak=true;
+        if (speak==true)
+        {
+            if(Build.VERSION.SDK_INT>21){
+                myTTs.speak(message, TextToSpeech.QUEUE_FLUSH,null,null);
+            }
+            else{
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.DONUT) {
+                    myTTs.speak(message,TextToSpeech.QUEUE_FLUSH,null);
+                }
             }
         }
+
     }
     ///methode pour initialiser le recognizer qui gère la voix
     @SuppressLint("NewApi")
