@@ -18,7 +18,7 @@ public class listener implements RecognitionListener
 {
     private static final String TAG = "MyStt3Activity";
 
-    public static speaker parleur;
+    //public static speaker parleur;
 
     MapsActivity mapsActivity;
     public void onReadyForSpeech(Bundle params){ }
@@ -54,9 +54,13 @@ public class listener implements RecognitionListener
         //mapsActivity.speake(data.get(0).toString());
         //Log.i("mapsActivity",mapsActivity.toString());
         //Log.i("mapsActivity dbhelper",mapsActivity.dbhelper.toString());
-      mapsActivity.insertion(data.get(0).toString(), String.valueOf(mapsActivity.blindCoor.latitude), String.valueOf(mapsActivity.blindCoor.longitude));   ///new zone added with blind
-                                                                                                                                                                 // coordinates and what he said
-        parleur.speake("new zone created");
+      /***if (data.get(0).toString()!=null && mapsActivity.blindCoor!=null)
+        {
+            mapsActivity.insertion(data.get(0).toString(), String.valueOf(mapsActivity.blindCoor.latitude), String.valueOf(mapsActivity.blindCoor.longitude));   ///new zone added with blind
+        }***/
+        mapsActivity.insertion(data.get(0).toString(), String.valueOf(mapsActivity.blindCoor.latitude), String.valueOf(mapsActivity.blindCoor.longitude));   ///new zone added with blind
+                                                                 // coordinates and what he said
+      // parleur.speake("new zone created");
     }
     public void onPartialResults(Bundle partialResults)
     {

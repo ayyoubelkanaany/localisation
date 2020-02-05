@@ -32,7 +32,7 @@ public class speaker extends AppCompatActivity {
     }
     ///méthode speak
     public void speake(String message) {
-        //speak=true;
+        speak=true;
         if (speak==true)
         {
             if(Build.VERSION.SDK_INT>21){
